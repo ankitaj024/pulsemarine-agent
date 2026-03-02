@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rolling Agent</title>
+    <!-- Google Fonts for modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-branding">
+                <div class="pulse-indicator"></div>
+                <h1>Rolling Agent</h1>
+            </div>
+            <p class="header-subtitle">Intelligent Autonomous Database Subagent</p>
+        </header>
+
+        <!-- Messages Area -->
+        <main class="chat-history" id="chat-history">
+            <!-- Initial Greeting -->
+            <div class="message system-message">
+                <div class="message-content">
+                    <p>Welcome to <strong>Rolling Agent</strong>. Ask me any question regarding your vessels, fleets, users, or defects, and I will securely query the database logic for you.</p>
+                </div>
+            </div>
+            <!-- Messages will be injected here -->
+        </main>
+
+        <!-- Input Area -->
+        <footer class="chat-input-area">
+            <form id="chat-form" class="input-form">
+                <input 
+                    type="text" 
+                    id="user-input" 
+                    placeholder="Ask about your operations..." 
+                    autocomplete="off"
+                    required
+                />
+                <button type="submit" id="send-button">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
+                    </svg>
+                </button>
+            </form>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

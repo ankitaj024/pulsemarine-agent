@@ -1,0 +1,10 @@
+fastapi==0.110.0
+uvicorn==0.29.0
+pydantic==2.6.3
+pydantic-settings==2.2.1
+langgraph
+sqlalchemy
+psycopg2-binary
+langchain
+langchain-community
+langchain-openai

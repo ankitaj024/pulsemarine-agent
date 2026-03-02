@@ -1,0 +1,556 @@
+generator client {
+  provider = "prisma-client-py"
+  interface = "asyncio"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URI")
+}
+
+// -------------------------------------------------
+// GLOBAL ENUMS
+// -------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VesselStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum FleetStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// -------------------------------------------------
+// DEFECT ENUMS (Based on your Excel sheet)
+// -------------------------------------------------
+
+// Defect lifecycle statuses
+enum DefectStatus {
+  OPEN
+  REPAIR_COMPLETED
+  CLOSED
+  DEFERRED
+  CANCELLED
+}
+
+// Defect workflow/approval statuses
+enum WorkflowStatus {
+  IN_PROGRESS
+  UNDER_SUPDT_REVIEW
+  SUPDT_REVIEWED
+  UNDER_FM_REVIEW
+  FM_APPROVED
+}
+
+// Severity Levels
+enum DefectSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// Equipment Categories
+enum EquipmentCategory {
+  ACCOMMODATION_AND_GALLEY
+  AH_TOW_WINCH
+  AIR_CONDITIONING
+  AUX_ENGINES
+  BOW_THRUSTER
+  DECK_CRANES
+  DP_SYSTEM
+  ELECTRICAL_CONTROLS
+  GYROS
+  MAIN_ENGINES
+  MAIN_PROPULSION
+  BRIDGE_EQUIPMENT
+  DECK_EQUIPMENT
+  ENGINE_ROOM_EQUIPMENT
+  STEERING_GEAR
+  STERN_THRUSTER
+  ALTERNATORS
+  SAFETY
+  OTHERS
+}
+
+// Rank (Reported By)
+enum Rank {
+  MASTER
+  CHIEF_OFFICER
+  SECOND_OFFICER
+  THIRD_OFFICER
+  BOSUN
+  AB
+  CHIEF_ENGINEER
+  SECOND_ENGINEER
+  THIRD_ENGINEER
+  FOURTH_ENGINEER
+  ETO
+  FITTER
+  COOK
+  OTHERS
+}
+
+// Department
+enum Department {
+  TECHNICAL
+  MARINE
+  CATERING
+  CREWING
+  HSSEQ
+  DIVING
+  CONSTRUCTION
+  OTHERS
+}
+
+// Fleet Number
+enum FleetNumber {
+  FLEET_A
+  FLEET_B
+  FLEET_C
+  FLEET_D
+  FLEET_1
+  FLEET_2
+  FLEET_3
+  FLEET_4
+}
+
+// Defect Category
+enum DefectCategory {
+  TECHNICAL_ISSUE
+  LACK_OF_SPARES
+  PMS_COMPLIANCE
+  ELECTRICAL_ISSUES
+  BRIDGE_NAVIGATION_ISSUES
+  BRIDGE_COMMUNICATION_ISSUES
+  DP_RELATED
+  ADVERSE_WEATHER
+  UNDERWATER_ISSUES
+  CLIENT_RELATED
+  HUMAN_ERROR
+  MATERIAL_FAILURE
+  EXTERNAL
+  AGING
+  OTHERS
+}
+
+// Shore Assistance Required?
+enum ShoreAssistRequired {
+  NO_ASSISTANCE
+  YES_TECHNICAL_SUPPORT
+  STANDBY_TECHNICAL_SUPPORT
+}
+
+// Spares Availability On Board
+enum SparesAvailability {
+  AVAILABLE
+  PARTIALLY_AVAILABLE
+  NOT_AVAILABLE
+}
+
+// Impact on Operation
+enum ImpactOnOperation {
+  NO_IMPACT
+  LIKELY_OFFHIRED
+  VESSEL_OFFHIRED
+}
+
+enum vesselCatagory {
+  HARBOUR
+  OSV
+  JACKUP_BARGE
+}
+
+enum vesselSubCatagory {
+  NON_DP
+  DP_1
+  DP_2
+  DP_3
+  NON_SELF_PROPELLED
+  SLEF_PROPELLED
+  OTHER
+}
+
+// PMS Overdue?
+enum PlannedMaintenanceStatus {
+  YES
+  NO
+}
+
+// -------------------------------------------------
+// MODELS
+// -------------------------------------------------
+
+// Admin
+model admin {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  password  String
+  status    UserStatus @default(ACTIVE)
+  role      String     @default("SUPER-ADMIN")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+// Company
+model company {
+  id          String        @id @default(uuid())
+  name        String
+  email       String        @unique
+  color       String?
+  phoneNumber String?
+  address     String?
+  logoUrl     String?
+  status      CompanyStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  isDeleted   Boolean?      @default(false)
+
+  users      user[]
+  vessels    vessel[]
+  defects    defect[]
+  charterers charterer[]
+  tags       tag[]
+  fleets     fleet[]
+}
+
+// Charterer
+model charterer {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company company @relation(fields: [companyId], references: [id])
+}
+
+// User
+model user {
+  id          String     @id @default(uuid())
+  name        String
+  email       String     @unique
+  password    String?
+  roleId      String
+  companyId   String
+  otp         String?
+  otpExpiry   DateTime?
+  status      UserStatus @default(ACTIVE)
+  isDeleted   Boolean?   @default(false)
+  fleetName   String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  phoneNumber String?
+
+  role    role    @relation(fields: [roleId], references: [id])
+  company company @relation(fields: [companyId], references: [id])
+
+  createdDefects  defect[] @relation("CreatedByUser")
+  assignedDefects defect[] @relation("AssignedToUser")
+
+  comments      defectComment[]
+  attachments   defectAttachment[]
+  history       defectStatusHistory[]
+  vessels       vessel[]
+  notifications notification[]
+  vesselIds     String[]
+}
+
+// Role
+model role {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  users     user[]
+}
+
+// Vessel
+model vessel {
+  id                          String             @id @default(uuid())
+  companyId                   String
+  vesselName                  String
+  imoNumber                   BigInt
+  vesselType                  String?
+  vesselCode                  String?
+  vesselCatagory              vesselCatagory?
+  vesselSubCatagory           vesselSubCatagory?
+  vesselFlag                  String?
+  localMobileNumber           String?
+  satellitePhoneNumber        String?
+  reportStatDate              String?
+  yearOfBuild                 Int?
+  vesselClassificationSociety String?
+  grossRegisterTonnage        Int?
+  netRegisterTonnage          Int?
+  deadWeight                  Int?
+  lengthOverall               Float?
+  lengthBetweenPerpendiculars Float?
+  depthMoulded                Float?
+  breadthMoulded              Float?
+  summerDraft                 Float?
+  fleetId                     String?
+  fleet                       fleet?             @relation(fields: [fleetId], references: [id])
+  attachmentKey               String?
+  isDeleted                   Boolean?           @default(false)
+  isAssigned                  Boolean?           @default(false)
+  assignedToId                String?
+  assignedTo                  user?              @relation(fields: [assignedToId], references: [id])
+  status                      VesselStatus       @default(ACTIVE)
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+
+  company company  @relation(fields: [companyId], references: [id])
+  defects defect[]
+}
+
+// ----------------------------------------------------------
+// UPDATED DEFECT MODEL — Matches ALL 34 Fields (Excel Sheet)
+// ----------------------------------------------------------
+
+model defect {
+  id        String @id @default(uuid())
+  companyId String
+  vesselId  String
+
+  // 1. Defect No.
+  defectNumber String @unique
+
+  // 2. Title
+  title String
+
+  // 3. Vessel Name
+  vesselName String?
+
+  // 5. Equipment Category
+  equipmentCategory EquipmentCategory
+
+  equipmentSubcatagory String?
+
+  equipmentTags String[]
+
+  // 6. Severity Level
+  severity DefectSeverity @default(MEDIUM)
+
+  // 7. Reported By Name
+  reportedByName String?
+
+  // 8. Rank
+  rank Rank?
+
+  // 9. Reported Date
+  reportedAt DateTime
+
+  // 10. Defect Actual Date
+  defectActualDate DateTime?
+
+  // 11. Client Name
+  clientName String?
+
+  // 12. Target Closing Date
+  targetCloseDate DateTime?
+
+  // 13. Actual Closed Date
+  actualCloseDate DateTime?
+
+  // 14. Department
+  department Department?
+
+  // 15. Fleet Number
+  fleetId String?
+  fleet   fleet?  @relation(fields: [fleetId], references: [id])
+
+  // 16. Supdt. Name
+  superintendentName String?
+
+  // 17. Master Name
+  masterName String?
+
+  // 18. Chief Engineer Name
+  chiefEngineerName String?
+
+  // 19. Defect Status
+  status DefectStatus @default(OPEN)
+
+  // 19b. Workflow Status (auto-set to UNDER_SUPDT_REVIEW when status = REPAIR_COMPLETED)
+  workflowStatus WorkflowStatus @default(IN_PROGRESS)
+
+  vesselReport         String?
+  superintendentReport String?
+  fleetManagerReport   String?
+
+  // 20. Shore Assistance Required
+  shoreAssistRequired ShoreAssistRequired?
+
+  // 21. Spares Available Onboard
+  sparesAvailableOnboard SparesAvailability?
+
+  // 22. VRN Number
+  vrnNumber String?
+
+  // 23. Defect Category
+  defectCategory DefectCategory?
+
+  // 24. Impact on Operation
+  impactOnOperation ImpactOnOperation?
+
+  // 25. Planned Maintenance Overdue?
+  plannedMaintenance PlannedMaintenanceStatus?
+
+  // 26. Description of Defect
+  descriptionOfDefect String?
+
+  // 27. Scope of Repair
+  scopeOfRepair String?
+
+  // 28. Immediate Action Taken
+  immediateActionTaken String?
+
+  // 29. Root Cause Analysis
+  rootCauseAnalysis String?
+
+  // 30. Action to Prevent Recurrence
+  actionToPreventRecurrence String?
+
+  // 31. Shore Remarks
+  shoreRemarks String?
+
+  // 33. Created By
+  createdById String?
+
+  // 34. Assigned To
+  assignedToId String?
+
+  isDeleted Boolean? @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company    company @relation(fields: [companyId], references: [id])
+  vessel     vessel  @relation(fields: [vesselId], references: [id])
+  createdBy  user?   @relation("CreatedByUser", fields: [createdById], references: [id])
+  assignedTo user?   @relation("AssignedToUser", fields: [assignedToId], references: [id])
+
+  comments    defectComment[]
+  attachments defectAttachment[]
+  history     defectStatusHistory[]
+}
+
+// -------------------------------------------------
+// DEFECT COMMENT
+// -------------------------------------------------
+
+model defectComment {
+  id            String      @id @default(uuid())
+  defectId      String
+  authorId      String
+  comment       String
+  attachmentKey String?
+  commentType   CommentType @default(INTERNAL)
+  createdAt     DateTime    @default(now())
+  defect        defect      @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  author        user        @relation(fields: [authorId], references: [id])
+}
+
+enum CommentType {
+  INTERNAL
+  EXTERNAL
+}
+
+// -------------------------------------------------
+// DEFECT ATTACHMENTS
+// -------------------------------------------------
+
+model defectAttachment {
+  id         String   @id @default(uuid())
+  defectId   String
+  fileUrl    String
+  uploadedBy String
+  uploadedAt DateTime @default(now())
+
+  defect defect @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  user   user   @relation(fields: [uploadedBy], references: [id])
+}
+
+// -------------------------------------------------
+// DEFECT STATUS HISTORY
+// -------------------------------------------------
+
+model defectStatusHistory {
+  id             String          @id @default(uuid())
+  defectId       String
+  status         DefectStatus?
+  workflowStatus WorkflowStatus?
+  changedBy      String
+  changedAt      DateTime        @default(now())
+
+  defect defect @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  user   user   @relation(fields: [changedBy], references: [id])
+}
+
+// -------------------------------------------------
+// TAGS
+// -------------------------------------------------
+
+model tag {
+  id        String   @id @default(uuid())
+  title     String
+  color     String?
+  companyId String
+  isDeleted Boolean? @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company company @relation(fields: [companyId], references: [id])
+}
+
+// -------------------------------------------------
+// FLEETS
+// -------------------------------------------------
+
+model fleet {
+  id        String      @id @default(uuid())
+  name      String
+  companyId String
+  status    FleetStatus @default(ACTIVE)
+  isDeleted Boolean?    @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  company company  @relation(fields: [companyId], references: [id])
+  vessels vessel[]
+  defects defect[]
+}
+
+// -------------------------------------------------
+// NOTIFICATIONS
+// -------------------------------------------------
+
+model notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user user @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+}
