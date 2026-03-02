@@ -1,6 +1,6 @@
 import textwrap
 import asyncio
-from prisma import Prisma
+from app.prisma import Prisma
 
 async def execute_prisma_code(code: str, db: Prisma):
     """
