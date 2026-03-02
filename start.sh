@@ -1,8 +1,9 @@
 #!/bin/bash
-# Fetch Prisma binaries at runtime since Render clears the cache directory after build
 echo "Fetching Prisma binaries at runtime..."
+export PRISMA_TARGET_DIR=/opt/render/project/src/
+export PRISMA_CLI_QUERY_ENGINE_TYPE=binary
+export PRISMA_CLIENT_ENGINE_TYPE=binary
 prisma py fetch
 
-# Start the FastAPI application
 echo "Starting Uvicorn..."
 uvicorn app.main:app --host 0.0.0.0 --port $PORT
